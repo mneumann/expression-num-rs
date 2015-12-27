@@ -1,0 +1,13 @@
+[package]
+name = "expression-num"
+version = "0.1.0"
+authors = ["Michael Neumann <mneumann@ntecs.de>"]
+
+license = "MIT"
+repository = "https://github.com/mneumann/expression-num-rs"
+description = "Numerical expression implementation based on expression-rs"
+keywords = ["expression", "term", "numeric"]
+
+[dependencies]
+asexp = "0.1.0"
+expression = "0.3.0"
