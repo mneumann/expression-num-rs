@@ -41,6 +41,69 @@ pub enum NumExpr<T: NumType> {
     Recipz(Box<NumExpr<T>>),
 }
 
+impl<T: NumType> NumExpr<T> {
+    pub fn op_add(self, other: NumExpr<T>) -> NumExpr<T> {
+        match (self, other) {
+            (NumExpr::Const(a), NumExpr::Const(b)) => NumExpr::Const(a + b),
+            (a, b) => NumExpr::Add(Box::new(a), Box::new(b)),
+        }
+    }
+
+    pub fn op_sub(self, other: NumExpr<T>) -> NumExpr<T> {
+        match (self, other) {
+            (NumExpr::Const(a), NumExpr::Const(b)) => NumExpr::Const(a - b),
+            (a, b) => NumExpr::Sub(Box::new(a), Box::new(b)),
+        }
+    }
+
+    pub fn op_mul(self, other: NumExpr<T>) -> NumExpr<T> {
+        match (self, other) {
+            (NumExpr::Const(a), NumExpr::Const(b)) => NumExpr::Const(a * b),
+            (a, b) => NumExpr::Mul(Box::new(a), Box::new(b)),
+        }
+    }
+
+    pub fn op_div(self, other: NumExpr<T>) -> NumExpr<T> {
+        match (self, other) {
+            (NumExpr::Const(a), NumExpr::Const(b)) if b != T::zero() => NumExpr::Const(a * b),
+            (a, b) => NumExpr::Div(Box::new(a), Box::new(b)),
+        }
+    }
+
+    pub fn op_divz(self, other: NumExpr<T>) -> NumExpr<T> {
+        match (self, other) {
+            (NumExpr::Const(a), NumExpr::Const(b)) => {
+                if b == T::zero() {
+                    NumExpr::Const(T::zero())
+                } else {
+                    NumExpr::Const(a * b)
+                }
+            }
+            (a, b) => NumExpr::Divz(Box::new(a), Box::new(b)),
+        }
+    }
+
+    pub fn op_recip(self) -> NumExpr<T> {
+        match self {
+            NumExpr::Const(a) if a != T::zero() => NumExpr::Const(T::one() / a),
+            a => NumExpr::Recip(Box::new(a)),
+        }
+    }
+
+    pub fn op_recipz(self) -> NumExpr<T> {
+        match self {
+            NumExpr::Const(a) => {
+                if a == T::zero() {
+                    NumExpr::Const(T::zero())
+                } else {
+                    NumExpr::Const(T::one() / a)
+                }
+            }
+            a => NumExpr::Recipz(Box::new(a)),
+        }
+    }
+}
+
 impl<T: NumType> Expression for NumExpr<T> {
     type Element = T;
 
@@ -172,4 +235,18 @@ fn test_expr() {
 
     check(&expr, 123.0, 4444.0);
     check(&expr, 0.0, -12.0);
+}
+
+#[test]
+fn test_constant_folding() {
+    let expr = NumExpr::Const(1.0);
+    let expr2 = expr.op_add(NumExpr::Const(2.0));
+    assert_eq!(NumExpr::Const(1.0 + 2.0), expr2);
+
+    let expr = NumExpr::Var(1);
+    let expr2 = expr.op_add(NumExpr::Const(2.0));
+    assert_eq!(NumExpr::Add(box NumExpr::Var(1), box NumExpr::Const(2.0)),
+               expr2);
+
+
 }
