@@ -1,6 +1,6 @@
 [package]
 name = "expression-num"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Michael Neumann <mneumann@ntecs.de>"]
 
 license = "MIT"
@@ -9,5 +9,5 @@ description = "Numerical expression implementation based on expression-rs"
 keywords = ["expression", "term", "numeric"]
 
 [dependencies]
-asexp = "0.1.0"
+asexp = "0.2.0"
 expression = "0.3.0"
