@@ -1,11 +1,6 @@
-#![feature(zero_one,box_syntax)]
-
-extern crate asexp;
-extern crate expression;
-
 use expression::{ExpressionError, Expression};
 use std::ops::{Add, Sub, Mul, Div};
-use std::num::{Zero, One};
+use num_traits::{Zero, One};
 use std::fmt::Debug;
 use asexp::Sexp;
 
@@ -110,29 +105,29 @@ impl<T: NumType> Expression for NumExpr<T> {
     fn evaluate(&self, variables: &[Self::Element]) -> Result<Self::Element, ExpressionError> {
         Ok(match self {
             &NumExpr::Var(n) => {
-                try!(variables.get(n).ok_or(ExpressionError::InvalidVariable)).clone()
+                variables.get(n).ok_or(ExpressionError::InvalidVariable)?.clone()
             }
             &NumExpr::Const(val) => val,
             &NumExpr::Add(ref e1, ref e2) => {
-                try!(e1.evaluate(variables)) + try!(e2.evaluate(variables))
+                e1.evaluate(variables)? + e2.evaluate(variables)?
             }
             &NumExpr::Sub(ref e1, ref e2) => {
-                try!(e1.evaluate(variables)) - try!(e2.evaluate(variables))
+                e1.evaluate(variables)? - e2.evaluate(variables)?
             }
             &NumExpr::Mul(ref e1, ref e2) => {
-                try!(e1.evaluate(variables)) * try!(e2.evaluate(variables))
+                e1.evaluate(variables)? * e2.evaluate(variables)?
             }
             &NumExpr::Div(ref e1, ref e2) => {
-                let a = try!(e1.evaluate(variables));
-                let div = try!(e2.evaluate(variables));
+                let a = e1.evaluate(variables)?;
+                let div = e2.evaluate(variables)?;
                 if div == T::zero() {
                     return Err(ExpressionError::DivByZero);
                 }
                 a / div
             }
             &NumExpr::Divz(ref e1, ref e2) => {
-                let a = try!(e1.evaluate(variables));
-                let div = try!(e2.evaluate(variables));
+                let a = e1.evaluate(variables)?;
+                let div = e2.evaluate(variables)?;
                 if div == T::zero() {
                     div
                 } else {
@@ -140,7 +135,7 @@ impl<T: NumType> Expression for NumExpr<T> {
                 }
             }
             &NumExpr::Recip(ref e1) => {
-                let div = try!(e1.evaluate(variables));
+                let div = e1.evaluate(variables)?;
                 if div == T::zero() {
                     return Err(ExpressionError::DivByZero);
                 } else {
@@ -148,7 +143,7 @@ impl<T: NumType> Expression for NumExpr<T> {
                 }
             }
             &NumExpr::Recipz(ref e1) => {
-                let div = try!(e1.evaluate(variables));
+                let div = e1.evaluate(variables)?;
                 if div == T::zero() {
                     div
                 } else {
@@ -200,30 +195,51 @@ const NO_VARS: [f32; 0] = [];
 
 #[test]
 fn test_expr_divz() {
-    let expr = NumExpr::Divz(box NumExpr::Const(1.0), box NumExpr::Const(0.0));
+    let expr = NumExpr::Divz(Box::new(NumExpr::Const(1.0)), Box::new(NumExpr::Const(0.0)));
     assert_eq!(Ok(0.0), expr.evaluate(&NO_VARS));
 }
 
 #[test]
 fn test_expr_recipz() {
-    let expr = NumExpr::Recipz(box NumExpr::Const(0.0));
+    let expr = NumExpr::Recipz(Box::new(NumExpr::Const(0.0)));
     assert_eq!(Ok(0.0), expr.evaluate(&NO_VARS));
 
-    let expr = NumExpr::Recipz(box NumExpr::Const(1.0));
+    let expr = NumExpr::Recipz(Box::new(NumExpr::Const(1.0)));
     assert_eq!(Ok(1.0), expr.evaluate(&NO_VARS));
 
-    let expr = NumExpr::Recipz(box NumExpr::Const(0.5));
+    let expr = NumExpr::Recipz(Box::new(NumExpr::Const(0.5)));
     assert_eq!(Ok(2.0), expr.evaluate(&NO_VARS));
 }
 
 #[test]
 fn test_expr() {
     let expr =
-        NumExpr::Sub(box NumExpr::Const(0.0),
-                     box NumExpr::Div(box NumExpr::Mul(box NumExpr::Add(box NumExpr::Const(1.0),
-                                                                        box NumExpr::Var(0)),
-                                                       box NumExpr::Var(1)),
-                                      box NumExpr::Const(2.0)));
+        NumExpr::Sub(
+            Box::new(
+                NumExpr::Const(0.0)),
+            Box::new(
+                NumExpr::Div(
+                    Box::new(
+                        NumExpr::Mul(
+                            Box::new(
+                                NumExpr::Add(
+                                    Box::new(
+                                        NumExpr::Const(1.0)
+                                    ),
+                                    Box::new(
+                                        NumExpr::Var(0)
+                                    )
+                                )
+                            ),
+                            Box::new(NumExpr::Var(1))
+                        )
+                    ),
+                    Box::new(
+                        NumExpr::Const(2.0)
+                    )
+                )
+            )
+        );
 
     fn fun(a: f32, b: f32) -> f32 {
         0.0 - ((1.0 + a) * b) / 2.0
@@ -245,8 +261,6 @@ fn test_constant_folding() {
 
     let expr = NumExpr::Var(1);
     let expr2 = expr.op_add(NumExpr::Const(2.0));
-    assert_eq!(NumExpr::Add(box NumExpr::Var(1), box NumExpr::Const(2.0)),
+    assert_eq!(NumExpr::Add(Box::new(NumExpr::Var(1)), Box::new(NumExpr::Const(2.0))),
                expr2);
-
-
 }
