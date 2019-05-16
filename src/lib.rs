@@ -1,11 +1,24 @@
-use expression::{ExpressionError, Expression};
-use std::ops::{Add, Sub, Mul, Div};
-use num_traits::{Zero, One};
-use std::fmt::Debug;
 use asexp::Sexp;
+use expression::{Expression, ExpressionError};
+use num_traits::{One, Zero};
+use std::fmt::Debug;
+use std::ops::{Add, Div, Mul, Sub};
 
-pub trait NumType: Debug + Copy + Clone + PartialEq + PartialOrd + Default + Zero + One +
-Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Div<Output=Self> {}
+pub trait NumType:
+    Debug
+    + Copy
+    + Clone
+    + PartialEq
+    + PartialOrd
+    + Default
+    + Zero
+    + One
+    + Add<Output = Self>
+    + Sub<Output = Self>
+    + Mul<Output = Self>
+    + Div<Output = Self>
+{
+}
 
 impl NumType for f32 {}
 impl NumType for f64 {}
@@ -104,19 +117,14 @@ impl<T: NumType> Expression for NumExpr<T> {
 
     fn evaluate(&self, variables: &[Self::Element]) -> Result<Self::Element, ExpressionError> {
         Ok(match self {
-            &NumExpr::Var(n) => {
-                variables.get(n).ok_or(ExpressionError::InvalidVariable)?.clone()
-            }
+            &NumExpr::Var(n) => variables
+                .get(n)
+                .ok_or(ExpressionError::InvalidVariable)?
+                .clone(),
             &NumExpr::Const(val) => val,
-            &NumExpr::Add(ref e1, ref e2) => {
-                e1.evaluate(variables)? + e2.evaluate(variables)?
-            }
-            &NumExpr::Sub(ref e1, ref e2) => {
-                e1.evaluate(variables)? - e2.evaluate(variables)?
-            }
-            &NumExpr::Mul(ref e1, ref e2) => {
-                e1.evaluate(variables)? * e2.evaluate(variables)?
-            }
+            &NumExpr::Add(ref e1, ref e2) => e1.evaluate(variables)? + e2.evaluate(variables)?,
+            &NumExpr::Sub(ref e1, ref e2) => e1.evaluate(variables)? - e2.evaluate(variables)?,
+            &NumExpr::Mul(ref e1, ref e2) => e1.evaluate(variables)? * e2.evaluate(variables)?,
             &NumExpr::Div(ref e1, ref e2) => {
                 let a = e1.evaluate(variables)?;
                 let div = e2.evaluate(variables)?;
@@ -159,31 +167,31 @@ impl<'a, T: NumType + Into<Sexp>> Into<Sexp> for &'a NumExpr<T> {
         match self {
             &NumExpr::Const(n) => n.into(),
             &NumExpr::Var(n) => Sexp::from(format!("${}", n)),
-            &NumExpr::Add(ref a, ref b) => {
-                Sexp::from(("+",
-                            Into::<Sexp>::into(a.as_ref()),
-                            Into::<Sexp>::into(b.as_ref())))
-            }
-            &NumExpr::Sub(ref a, ref b) => {
-                Sexp::from(("-",
-                            Into::<Sexp>::into(a.as_ref()),
-                            Into::<Sexp>::into(b.as_ref())))
-            }
-            &NumExpr::Mul(ref a, ref b) => {
-                Sexp::from(("*",
-                            Into::<Sexp>::into(a.as_ref()),
-                            Into::<Sexp>::into(b.as_ref())))
-            }
-            &NumExpr::Div(ref a, ref b) => {
-                Sexp::from(("/",
-                            Into::<Sexp>::into(a.as_ref()),
-                            Into::<Sexp>::into(b.as_ref())))
-            }
-            &NumExpr::Divz(ref a, ref b) => {
-                Sexp::from(("divz",
-                            Into::<Sexp>::into(a.as_ref()),
-                            Into::<Sexp>::into(b.as_ref())))
-            }
+            &NumExpr::Add(ref a, ref b) => Sexp::from((
+                "+",
+                Into::<Sexp>::into(a.as_ref()),
+                Into::<Sexp>::into(b.as_ref()),
+            )),
+            &NumExpr::Sub(ref a, ref b) => Sexp::from((
+                "-",
+                Into::<Sexp>::into(a.as_ref()),
+                Into::<Sexp>::into(b.as_ref()),
+            )),
+            &NumExpr::Mul(ref a, ref b) => Sexp::from((
+                "*",
+                Into::<Sexp>::into(a.as_ref()),
+                Into::<Sexp>::into(b.as_ref()),
+            )),
+            &NumExpr::Div(ref a, ref b) => Sexp::from((
+                "/",
+                Into::<Sexp>::into(a.as_ref()),
+                Into::<Sexp>::into(b.as_ref()),
+            )),
+            &NumExpr::Divz(ref a, ref b) => Sexp::from((
+                "divz",
+                Into::<Sexp>::into(a.as_ref()),
+                Into::<Sexp>::into(b.as_ref()),
+            )),
             &NumExpr::Recip(ref a) => Sexp::from(("recip", Into::<Sexp>::into(a.as_ref()))),
             &NumExpr::Recipz(ref a) => Sexp::from(("recipz", Into::<Sexp>::into(a.as_ref()))),
         }
@@ -213,33 +221,19 @@ fn test_expr_recipz() {
 
 #[test]
 fn test_expr() {
-    let expr =
-        NumExpr::Sub(
-            Box::new(
-                NumExpr::Const(0.0)),
-            Box::new(
-                NumExpr::Div(
-                    Box::new(
-                        NumExpr::Mul(
-                            Box::new(
-                                NumExpr::Add(
-                                    Box::new(
-                                        NumExpr::Const(1.0)
-                                    ),
-                                    Box::new(
-                                        NumExpr::Var(0)
-                                    )
-                                )
-                            ),
-                            Box::new(NumExpr::Var(1))
-                        )
-                    ),
-                    Box::new(
-                        NumExpr::Const(2.0)
-                    )
-                )
-            )
-        );
+    let expr = NumExpr::Sub(
+        Box::new(NumExpr::Const(0.0)),
+        Box::new(NumExpr::Div(
+            Box::new(NumExpr::Mul(
+                Box::new(NumExpr::Add(
+                    Box::new(NumExpr::Const(1.0)),
+                    Box::new(NumExpr::Var(0)),
+                )),
+                Box::new(NumExpr::Var(1)),
+            )),
+            Box::new(NumExpr::Const(2.0)),
+        )),
+    );
 
     fn fun(a: f32, b: f32) -> f32 {
         0.0 - ((1.0 + a) * b) / 2.0
@@ -261,6 +255,8 @@ fn test_constant_folding() {
 
     let expr = NumExpr::Var(1);
     let expr2 = expr.op_add(NumExpr::Const(2.0));
-    assert_eq!(NumExpr::Add(Box::new(NumExpr::Var(1)), Box::new(NumExpr::Const(2.0))),
-               expr2);
+    assert_eq!(
+        NumExpr::Add(Box::new(NumExpr::Var(1)), Box::new(NumExpr::Const(2.0))),
+        expr2
+    );
 }
